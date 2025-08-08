@@ -487,12 +487,20 @@ sub main {
 				}
 			}
       }
+      when (4) {
+        $returnstring = $returnstring . "UPS RUNNING ON SMART-BOOST! - ";
+        $status = 1 if ( $status != 2 );
+      }
       when (6 || 9 ) {
         $returnstring = $returnstring . "UPS RUNNING ON BYPASS! - ";
         $status = 1 if ( $status != 2 );
       }
       when (10) {
         $returnstring = $returnstring . "HARDWARE FAILURE UPS RUNNING ON BYPASS! - ";
+        $status = 1 if ( $status != 2 );
+      }
+      when (12) {
+        $returnstring = $returnstring . "UPS RUNNING ON SMART-TRIM! - ";
         $status = 1 if ( $status != 2 );
       }
       default {
