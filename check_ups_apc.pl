@@ -7,6 +7,7 @@
 #    Modified by Oliver Skibbe oliver.skibbe at mdkn.de
 #    Modified by Alexander Rudolf alexander.rudolf (at) saxsys.de
 #    Modified by Manuel Mahr manuel (at) it-mahr.com
+#    Modified by Brady Alleman balleman (at) thtech.net
 #    
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -22,7 +23,11 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA    02111-1307    USA
 #
-#
+# 2026-05-21: balleman (at) thtech.net
+#       - Enable experimental warnings
+#       - Remove deprecated when operator
+# 2025-08-08: balleman (at) thtech.net
+#       - Add Smart-Boost and Smart-Trim statuses
 # 2023-04-05: xinqu (at) v32bis.cc
 #	- normalize various date-strings to "%Y-%m-%d" (sub normalize_date)
 #	- changed #! to '../env perl' for compatibility reasons
@@ -68,12 +73,13 @@
 #		After: CRIT - Smart-UPS RT 10000 XL - CRIT BATTERY CAPACITY 50% - STATUS NORMAL - OUTPUT LOAD 31% - TEMPERATURE 23 °C
 #	- Added multiline output for firmware,manufacture date and serial number
 
-use feature ":5.10";
+use v5.42;
+use utf8;
+use warnings;
 use Net::SNMP;
 use Getopt::Std;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Time::Piece;
-no warnings "experimental";
 
 # Do we have enough information?
 if (@ARGV < 1) {
@@ -87,65 +93,67 @@ my ($ip, $community, $battemperature_warn, $battemperature_crit, $version, $user
 # Initialize variables....
 my $net_snmp_debug_level = 0x00;	# See http://search.cpan.org/~dtown/Net-SNMP-v6.0.1/lib/Net/SNMP.pm#debug()_-_set_or_get_the_debug_mode_for_the_module
 
-$script    = "check_ups_apc.pl";
-$script_version = "1.5";
+my $script    = "check_ups_apc.pl";
+my $script_version = "1.5";
 
-$timeout = 10;			# SNMP query timeout
-$status = 0;
-$returnstring = "";
-$perfdata = "";
+my $timeout = 10;			# SNMP query timeout
+my $status = 0;
+my $returnstring = "";
+my $perfdata = "";
 
 ## OIDs
-$oid_sysDescr = ".1.3.6.1.2.1.1.1.0";
-$oid_serial_number = ".1.3.6.1.4.1.318.1.1.1.1.2.3.0";
-$oid_firmware = ".1.3.6.1.4.1.318.1.1.1.1.2.1.0";
-$oid_manufacture_date = ".1.3.6.1.4.1.318.1.1.1.1.2.2.0";
-$oid_battery_date = ".1.3.6.1.4.1.318.1.1.1.2.1.3.0";
-$oid_upstype = ".1.3.6.1.4.1.318.1.1.1.1.1.1.0";
-$oid_battery_capacity = ".1.3.6.1.4.1.318.1.1.1.2.2.1.0";
-$oid_output_status = ".1.3.6.1.4.1.318.1.1.1.4.1.1.0";
-$oid_output_current = ".1.3.6.1.4.1.318.1.1.1.4.2.4.0";
-$oid_output_load = ".1.3.6.1.4.1.318.1.1.1.4.2.3.0";
-$oid_battemperature = ".1.3.6.1.4.1.318.1.1.1.2.2.2.0";
-$oid_exttemperature = ".1.3.6.1.4.1.318.1.1.10.2.3.2.1.4.1";
-$oid_remaining_time = ".1.3.6.1.4.1.318.1.1.1.2.2.3.0";
-$oid_on_battery_time = ".1.3.6.1.4.1.318.1.1.1.2.1.2.0";
-$oid_reason_switch = ".1.3.6.1.4.1.318.1.1.1.3.2.5.0";
+my $oid_sysDescr = ".1.3.6.1.2.1.1.1.0";
+my $oid_serial_number = ".1.3.6.1.4.1.318.1.1.1.1.2.3.0";
+my $oid_firmware = ".1.3.6.1.4.1.318.1.1.1.1.2.1.0";
+my $oid_manufacture_date = ".1.3.6.1.4.1.318.1.1.1.1.2.2.0";
+my $oid_battery_date = ".1.3.6.1.4.1.318.1.1.1.2.1.3.0";
+my $oid_upstype = ".1.3.6.1.4.1.318.1.1.1.1.1.1.0";
+my $oid_battery_capacity = ".1.3.6.1.4.1.318.1.1.1.2.2.1.0";
+my $oid_output_status = ".1.3.6.1.4.1.318.1.1.1.4.1.1.0";
+my $oid_output_current = ".1.3.6.1.4.1.318.1.1.1.4.2.4.0";
+my $oid_output_load = ".1.3.6.1.4.1.318.1.1.1.4.2.3.0";
+my $oid_battemperature = ".1.3.6.1.4.1.318.1.1.1.2.2.2.0";
+my $oid_exttemperature = ".1.3.6.1.4.1.318.1.1.10.2.3.2.1.4.1";
+my $oid_remaining_time = ".1.3.6.1.4.1.318.1.1.1.2.2.3.0";
+my $oid_on_battery_time = ".1.3.6.1.4.1.318.1.1.1.2.1.2.0";
+my $oid_reason_switch = ".1.3.6.1.4.1.318.1.1.1.3.2.5.0";
 
 # optional, Smart-UPS 2200 support this
-$oid_current_load_wh = ".1.3.6.1.4.1.318.1.1.1.4.3.6.0";
-$oid_battery_replacment = ".1.3.6.1.4.1.318.1.1.1.2.2.4.0";
+my $oid_current_load_wh = ".1.3.6.1.4.1.318.1.1.1.4.3.6.0";
+my $oid_battery_replacment = ".1.3.6.1.4.1.318.1.1.1.2.2.4.0";
 
 # helper
-$upstype = "";
-$battery_capacity = 0;
-$output_status = 0;
-$output_current = 0;
-$output_load = 0;
-$battemperature = 0;
-$exttemperature = 0;
-$exttemperature = undef;
-$reason_switch = 0;
+my $upstype = "";
+my $battery_capacity = 0;
+my $output_status = 0;
+my $output_current = 0;
+my $output_load = 0;
+my $battemperature = 0;
+my $exttemperature = 0;
+my $exttemperature = undef;
+my $reason_switch = 0;
 
 
 # crit / warn values
-$remaining_time_crit = 5;
-$remaining_time_warn = 15;
+my $remaining_time_crit = 5;
+my $remaining_time_warn = 15;
 
-$output_load_crit = 80;
-$output_load_warn = 70;
+my $output_load_crit = 80;
+my $output_load_warn = 70;
 
-$battemperature_crit = 45;
-$battemperature_warn = 35;
+my $battemperature_crit = 45;
+my $battemperature_warn = 35;
 
-#$exttemperature_crit = 45;
-#$exttemperature_warn = 35;
+# my $exttemperature_crit = 45;
+# my $exttemperature_warn = 35;
 
-$battery_capacity_crit = 25;
-$battery_capacity_warn = 50;
+my $battery_capacity_crit = 25;
+my $battery_capacity_warn = 50;
 
 
 ## SNMP ##
+my $s; 
+my $e;
 if ( $version == 3 ) {
 	($s, $e) = get_snmp_session_v3(
 				$ip, 
@@ -270,6 +278,7 @@ sub main {
     #######################################################
 
     # special.. added for SMART-UPS 2200 
+    my $output_current_load_wh = "";
     if (defined($s->get_request($oid_current_load_wh)))  {
       if ( $oid_current_load_wh =~ /noSuchInstance/ ) {
 	     	foreach ($s->var_bind_names()) {
@@ -281,22 +290,22 @@ sub main {
 	# some useful stuff
     if (defined($s->get_request($oid_firmware))) {
 	foreach ($s->var_bind_names()) {
-              	$firmware = $s->var_bind_list()->{$_};
+              	my $firmware = $s->var_bind_list()->{$_};
         }
     }
     if ( defined (  $s->get_request($oid_serial_number))) {
 	foreach ($s->var_bind_names()) {
-               	$serial_number = $s->var_bind_list()->{$_};
+               	my $serial_number = $s->var_bind_list()->{$_};
 	}
     }
     if ( defined (  $s->get_request($oid_manufacture_date))) {
 	foreach ($s->var_bind_names()) {
-                $manufacture_date = $s->var_bind_list()->{$_};
+                my $manufacture_date = $s->var_bind_list()->{$_};
 	}
     }
 	if ( defined (  $s->get_request($oid_battery_date))) {
 	foreach ($s->var_bind_names()) {
-                $battery_date = $s->var_bind_list()->{$_};
+                my $battery_date = $s->var_bind_list()->{$_};
 	}
     }
 
@@ -351,6 +360,7 @@ sub main {
             return 1;
         }
     }
+    my $battery_replacement = "";
     foreach ($s->var_bind_names()) {
          $battery_replacement = $s->var_bind_list()->{$_};
     }
@@ -369,6 +379,7 @@ sub main {
             return 1;
         }
     }
+    my $remaining_time = "";
     foreach ($s->var_bind_names()) {
         $remaining_time = $s->var_bind_list()->{$_}; # returns (days),(hours),(minutes),seconds
     }
@@ -388,7 +399,7 @@ sub main {
         }
     }
     foreach ($s->var_bind_names()) {
-        $on_battery_time = $s->var_bind_list()->{$_}; # returns (days),(hours),(minutes),seconds
+        my $on_battery_time = $s->var_bind_list()->{$_}; # returns (days),(hours),(minutes),seconds
     }
 
     #######################################################
@@ -405,15 +416,15 @@ sub main {
             return 1;
         }
     }
-     foreach ($s->var_bind_names()) {
+    foreach ($s->var_bind_names()) {
          $battemperature = $s->var_bind_list()->{$_};
     }
 
     #######################################################
  
-    $returnstring = "";
-    $status = 0;
-    $perfdata = "";
+    my $returnstring = "";
+    my $status = 0;
+    my $perfdata = "";
 	
 
     if (defined($oid_upstype)) {
@@ -425,135 +436,104 @@ sub main {
         $status = 2;
     }
 
-    given ( $battery_capacity ) {
-      when ( $_ < $battery_capacity_crit) {
+    # Battery Capacity
+    if ( $battery_capacity < $battery_capacity_crit) {
         $returnstring = $returnstring . "CRIT BATTERY CAPACITY: $battery_capacity% - ";
-		$perfdata = $perfdata . "'capacity'=${battery_capacity}%;$battery_capacity_warn;$battery_capacity_crit;; ";
+	$perfdata = $perfdata . "'capacity'=${battery_capacity}%;$battery_capacity_warn;$battery_capacity_crit;; ";
         $status = 2;
-      }
-      when ( $_ < $battery_capacity_warn ) {
+    } elsif ( $battery_capacity < $battery_capacity_warn ) {
         $returnstring = $returnstring . "WARN BATTERY CAPACITY: $battery_capacity% - ";
-		$perfdata = $perfdata . "'capacity'=${battery_capacity}%;$battery_capacity_warn;$battery_capacity_crit;; ";
+	$perfdata = $perfdata . "'capacity'=${battery_capacity}%;$battery_capacity_warn;$battery_capacity_crit;; ";
         $status = 1 if ( $status != 2 );
-      }
-      when ( $_ <= 100) {
+    } elsif ( $battery_capacity <= 100) {
         $returnstring = $returnstring . "BATTERY CAPACITY: $battery_capacity% - ";
-		$perfdata = $perfdata . "'capacity'=${battery_capacity}%;$battery_capacity_warn;$battery_capacity_crit;; ";
-      }
-      default {
+	$perfdata = $perfdata . "'capacity'=${battery_capacity}%;$battery_capacity_warn;$battery_capacity_crit;; ";
+    } else {
         $returnstring = $returnstring . "UNKNOWN BATTERY CAPACITY! - ";
-		$perfdata = $perfdata . "'capacity'=NAN ";
+	$perfdata = $perfdata . "'capacity'=NAN ";
         $status = 3 if ( ( $status != 2 ) && ( $status != 1 ) );
-      }
     }
 
-    given($output_status) {
-      when (2) { $returnstring = $returnstring . "UPS RUNNING ON LINE - "; }
-      when (3) {
+    # Output Status
+    if ($output_status == 2) { 
+	$returnstring = $returnstring . "UPS RUNNING ON LINE - "; 
+    } elsif ($output_status == 3) {
         $returnstring = $returnstring . "UPS RUNNING ON BATTERY! - ";
         $status = 1 if ( $status != 2 );
-			given($reason_switch) {
-				when (2) { $returnstring = $returnstring . "No events "; }
-				when (2) {
+				if ($reason_switch == 2) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: HIGH LINE VOLTAGE - ";
-				}
-				when (3) {
+				} elsif ($reason_switch == 3) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: BROWNOUT - ";
-				}
-				when (4) {
+				} elsif ($reason_switch == 4) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: LOSS OF MAINS POWER - ";
-				}
-				when (5) {
+				} elsif ($reason_switch == 5) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: SMALL TEMPORARY POWER DROP - ";
-				}
-				when (6) {
+				} elsif ($reason_switch == 6) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: LARGE TEMPORARY POWER DROP - ";
-				}
-				when (7) {
+				} elsif ($reason_switch == 7) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: SMALL SPIKE - ";
-				}
-				when (8) {
+				} elsif ($reason_switch == 8) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: LARGE SPIKE - ";
-				}
-				when (9) {
+				} elsif ($reason_switch == 9) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: UPS SELF TEST - ";
-				}
-				when (10) {
+				} elsif ($reason_switch == 10) {
 					$returnstring = $returnstring . "LAST ON BATTERY REASON: EXCESSIVE INPUT VOLTAGE FLUCTUATION - ";
-				}
-				default {
+				} else {
 					$returnstring = $returnstring . "UNKNOWN OUTPUT STATUS! - ";
 					$status = 3 if ( ( $status != 2 ) && ( $status != 1 ) );
 				}
-			}
-      }
-      when (4) {
+      } elsif ($output_status == 4) {
         $returnstring = $returnstring . "UPS RUNNING ON SMART-BOOST! - ";
         $status = 1 if ( $status != 2 );
-      }
-      when (6 || 9 ) {
+      } elsif ($output_status == 6 || $output_status == 9) {
         $returnstring = $returnstring . "UPS RUNNING ON BYPASS! - ";
         $status = 1 if ( $status != 2 );
-      }
-      when (10) {
+      } elsif ($output_status == 10) {
         $returnstring = $returnstring . "HARDWARE FAILURE UPS RUNNING ON BYPASS! - ";
         $status = 1 if ( $status != 2 );
-      }
-      when (12) {
+      } elsif ($output_status == 12) {
         $returnstring = $returnstring . "UPS RUNNING ON SMART-TRIM! - ";
         $status = 1 if ( $status != 2 );
-      }
-      default {
+      } else {
         $returnstring = $returnstring . "UNKNOWN OUTPUT STATUS! - ";
         $status = 3 if ( ( $status != 2 ) && ( $status != 1 ) );
       }
     }
 
-
-    
-    given ( $output_load ) {
-      when ( $_ > $output_load_crit) {
+    # Output Load 
+      if ( $output_load > $output_load_crit) {
         $returnstring = $returnstring . "CRIT OUTPUT LOAD: $output_load% - ";
         $perfdata = $perfdata . "'load'=${output_load}%;$output_load_warn;$output_load_crit;; ";
         $status = 2;
-      }
-      when ( $_ > $output_load_warn) {
+      } elsif ($output_load > $output_load_warn) {
         $returnstring = $returnstring . "WARN OUTPUT LOAD: $output_load% - ";
         $perfdata = $perfdata . "'load'=${output_load}%;$output_load_warn;$output_load_crit;; ";
         $status = 1 if ( $status != 2 );
-      }
-      when ($_ >= 0) {
+      } elsif ($output_load >= 0) {
         $returnstring = $returnstring . "OUTPUT LOAD: $output_load% - ";
         $perfdata = $perfdata . "'load'=${output_load}%;$output_load_warn;$output_load_crit;; ";
-      }
-      default {
+      } else {
         $returnstring = $returnstring . "UNKNOWN OUTPUT LOAD! - ";
         $perfdata = $perfdata . "'load'=NAN ";
         $status = 3 if ( ( $status != 2 ) && ( $status != 1 ) );
       }
-    }
 
     # battery temperature
-    given ( $battemperature ) {
-      when ( $_ > $battemperature_crit ) {
+    if ( $battemperature > $battemperature_crit ) {
         $returnstring = $returnstring . "CRIT BATT TEMP: $battemperature °C - ";
         $perfdata = $perfdata . "'temp'=${battemperature};$battemperature_warn;$battemperature_crit;; ";
         $status = 2;
-      }
-      when ( $_ > $battemperature_warn ) {
+    } elsif ( $battemperature > $battemperature_warn ) {
         $returnstring = $returnstring . "WARN BATT TEMP: $battemperature °C - ";
         $perfdata = $perfdata . "'temp'=${battemperature};$battemperature_warn;$battemperature_crit;; ";
         $status = 1 if ( $status != 2 );
-      }
-      when ($_ >= 0 ) {
+    } elsif ( $battemperature >= 0 ) {
         $returnstring = $returnstring . "BATT TEMP: $battemperature °C - ";
         $perfdata = $perfdata . "'temp'=${battemperature};$battemperature_warn;$battemperature_crit;; ";
-      }
-      default {
+    } else {
         $returnstring = $returnstring . "UNKNOWN BATT TEMP! - ";
         $perfdata = $perfdata . "'temp'=NAN ";
         $status = 3 if ( ( $status != 2 ) && ( $status != 1 ) );
-      }
     }
 
     # external temperature
@@ -585,53 +565,49 @@ sub main {
     if ( defined ( $remaining_time ) ) {
 	# convert time to minutes
 	my @a = split(/ /,$remaining_time);
-	my $timeUnit = @a[1];
+	my $timeUnit = $a[1];
 	my $minutes = 0;
 
 	if ( $timeUnit =~ /hour/ ) {
 		# hours returned
-		my @minutesArray = split(/:/,@a[2]);
-		$minutes = @a[0] * 60;
-		$minutes = $minutes + @minutesArray[0];
+		my @minutesArray = split(/:/,$a[2]);
+		$minutes = $a[0] * 60;
+		$minutes = $minutes + $minutesArray[0];
 	} elsif ( $timeUnit =~ /minute/ ) {
 		# minutes returned
-		$minutes = @a[0];
+		$minutes = $a[0];
 	} else {
 		# seconds returned?
 		$minutes = 0;
 	}
 
-        given ( $minutes ) {
-	  when( $_ <= $remaining_time_crit ) {
+	if ( $minutes <= $remaining_time_crit ) {
 		$returnstring = $returnstring . "CRIT  MINUTES REMAINING: $minutes - ";
 	       	$status = 2;
-	  } 
-          when ( $_ <= $remaining_time_warn ) {
+	} elsif ( $minutes <= $remaining_time_warn ) {
 		$returnstring = $returnstring . "WARN MINUTES REMAINING: $minutes - ";
 	       	$status = 1;
-	  } 
-          default {
+	} else {
 		$returnstring = $returnstring . "MINUTES REMAINING: $minutes - ";
-	  }
-        }
-	$perfdata = $perfdata . "'remaining_sec'=" . $minutes*60 . "s;" . $remaining_time_warn*60 . ";" . $remaining_time_crit*60 . ";0; ";
 	}
+	$perfdata = $perfdata . "'remaining_sec'=" . $minutes*60 . "s;" . $remaining_time_warn*60 . ";" . $remaining_time_crit*60 . ";0; ";
+    }
 
-	# on battery time
+    # on battery time
     if ( defined ( $on_battery_time ) ) {
 	# convert time to minutes
 	my @a = split(/ /,$on_battery_time);
-	my $timeUnit = @a[1];
+	my $timeUnit = $a[1];
 	my $minutes = 0;
 
 	if ( $timeUnit =~ /hour/ ) {
 		# hours returned
-		my @minutesArray = split(/:/,@a[2]);
-		$minutes = @a[0] * 60;
-		$minutes = $minutes + @minutesArray[0];
+		my @minutesArray = split(/:/,$a[2]);
+		$minutes = $a[0] * 60;
+		$minutes = $minutes + $minutesArray[0];
 	} elsif ( $timeUnit =~ /minute/ ) {
 		# minutes returned
-		$minutes = @a[0];
+		$minutes = $a[0];
 	} else {
 		# seconds returned?
 		$minutes = 0;
@@ -692,7 +668,7 @@ sub get_snmp_session {
              	-hostname  => $ip,
              	-community => $community,
              	-port      => 161,
-             	-timeout   => 5,
+             	-timeout   => $timeout,
              	-retries   => 3,
 		-debug	   => $net_snmp_debug_level,
 		-version   => $version,
@@ -711,7 +687,7 @@ sub get_snmp_session_v3 {
   my ($session, $error) = Net::SNMP->session(
              	-hostname  	=> $ip,
              	-port      	=> 161,
-             	-timeout   	=> 5,
+             	-timeout   	=> $timeout,
              	-retries   	=> 3,
 		-debug	   	=> $net_snmp_debug_level,
 		-version   	=> 3,
