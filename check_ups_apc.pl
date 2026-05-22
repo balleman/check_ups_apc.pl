@@ -91,10 +91,12 @@ if ( @ARGV < 1 ) {
 
 # Parse out the arguments...
 my (
-    $ip,                  $community, $battemperature_warn,
-    $battemperature_crit, $version,   $user_name,
-    $auth_password,       $auth_prot, $priv_password,
-    $priv_prot,           $with_external_sensor
+    $ip,                    $community,            $battemperature_warn,
+    $battemperature_crit,   $version,              $user_name,
+    $auth_password,         $auth_prot,            $priv_password,
+    $priv_prot,             $with_external_sensor, $remaining_time_warn,
+    $remaining_time_crit,   $output_load_warn,     $output_load_crit,
+    $battery_capacity_warn, $battery_capacity_crit
 ) = parse_args();
 
 # Initialize variables....
@@ -140,21 +142,8 @@ my $battemperature   = 0;
 my $exttemperature   = 0;
 my $reason_switch    = 0;
 
-# crit / warn values
-my $remaining_time_crit = 5;
-my $remaining_time_warn = 15;
-
-my $output_load_crit = 80;
-my $output_load_warn = 70;
-
-$battemperature_crit = 45;
-$battemperature_warn = 35;
-
 # my $exttemperature_crit = 45;
 # my $exttemperature_warn = 35;
-
-my $battery_capacity_crit = 25;
-my $battery_capacity_warn = 50;
 
 ## SNMP ##
 my $s;
@@ -776,17 +765,25 @@ sub get_snmp_session_v3 {
 # Arguments
 ####################################################################
 sub parse_args {
-    my $ip        = "";
-    my $version   = "2";
-    my $community = "public";    # v1/v2c
+    my $ip                    = "";
+    my $version               = "2";
+    my $battemperature_warn   = 30;
+    my $battemperature_crit   = 40;
+    my $remaining_time_warn   = 15;
+    my $remaining_time_crit   = 5;
+    my $battery_capacity_warn = 50;
+    my $battery_capacity_crit = 25;
+    my $output_load_warn      = 70;
+    my $output_load_crit      = 80;
+    my $community             = "public";    # v1/v2c
 
-    my $user_name     = "public";    # v3
-    my $auth_password = "";          # v3
-    my $auth_prot     = "sha";       # v3 auth algo
-    my $priv_password = "";          # v3
-    my $priv_prot     = "aes";       # v3 priv algo
+    my $user_name     = "public";            # v3
+    my $auth_password = "";                  # v3
+    my $auth_prot     = "sha";               # v3 auth algo
+    my $priv_password = "";                  # v3
+    my $priv_prot     = "aes";               # v3 priv algo
 
-    my $with_external_sensor = undef;    # external sensor
+    my $with_external_sensor = undef;        # external sensor
     my $help                 = undef;
 
     pod2usage(
@@ -800,6 +797,12 @@ sub parse_args {
         'version|v:s'       => \$version,
         'warntemp|w:s'      => \$battemperature_warn,
         'crittemp|c:s'      => \$battemperature_crit,
+        'warntime:s'        => \$remaining_time_warn,
+        'crittime:s'        => \$remaining_time_crit,
+        'warnload:s'        => \$output_load_warn,
+        'critload:s'        => \$output_load_crit,
+        'warnbatt:s'        => \$battery_capacity_warn,
+        'critbatt:s'        => \$battery_capacity_crit,
         'community|C:s'     => \$community,
         'externalsensor|S!' => \$with_external_sensor,
         'username|U:s'      => \$user_name,
@@ -813,10 +816,15 @@ sub parse_args {
     usage() if $help;
 
     return (
-        $ip,                  $community, $battemperature_warn,
-        $battemperature_crit, $version,   $user_name,
-        $auth_password,       $auth_prot, $priv_password,
-        $priv_prot,           $with_external_sensor
+        $ip,                   $community,
+        $battemperature_warn,  $battemperature_crit,
+        $version,              $user_name,
+        $auth_password,        $auth_prot,
+        $priv_password,        $priv_prot,
+        $with_external_sensor, $remaining_time_warn,
+        $remaining_time_crit,  $output_load_warn,
+        $output_load_crit,     $battery_capacity_warn,
+        $battery_capacity_crit
     );
 }
 
@@ -832,19 +840,25 @@ Monitors APC SmartUPS via AP9617 SNMP management card.
 Usage: -H <hostname> -C <community> [...]
 
 Options: 
-         -H     Hostname or IP address
-         -S     with external sensor (like PowerNet)
-         -w     Warning threshold for battery temperature
-         -c     Critical threshold for battery temperature
-         -v     SNMP Version
+         -H          Hostname or IP address
+         -S          with external sensor (like PowerNet)
+         -w          Warning threshold for battery temperature
+         -c          Critical threshold for battery temperature
+	 -warntime   Warning threshold for time remaining (minutes)
+	 -crittime   Critical threshold for time remaining (minutes)
+	 -warnload   Warning threshold for output load (percent)
+	 -critload   Critical threshold for output load (percent)
+	 -warnbatt   Warning threshold for battery capacity (percent)
+	 -critbatt   Critical threshold for battery capacity (percent)
+         -v          SNMP Version
    SNMPv1/2
-         -C     Community (default is public)
+         -C          Community (default is public)
    SNMPv3
-         -U     Securityname / Username
-         -A     Authentication password
-         -a     Authentication protocl
-         -X     Private password
-         -x     Private procotol
+         -U          Securityname / Username
+         -A          Authentication password
+         -a          Authentication protocl
+         -X          Private password
+         -x          Private procotol
 
 
 	 
