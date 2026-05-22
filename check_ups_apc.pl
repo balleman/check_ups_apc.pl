@@ -27,7 +27,7 @@
 #       - Enable warnings
 #       - Remove deprecated when operator
 #       - Format with perltidy
-#       - Update to v5.42
+#       - Update to v5.40
 # 2025-08-08: balleman (at) thtech.net
 #       - Add Smart-Boost and Smart-Trim statuses
 # 2023-04-05: xinqu (at) v32bis.cc
@@ -75,7 +75,7 @@
 #		After: CRIT - Smart-UPS RT 10000 XL - CRIT BATTERY CAPACITY 50% - STATUS NORMAL - OUTPUT LOAD 31% - TEMPERATURE 23 °C
 #	- Added multiline output for firmware,manufacture date and serial number
 
-use v5.42;
+use v5.40;
 use utf8;
 use warnings;
 use Net::SNMP;
