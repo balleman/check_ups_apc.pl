@@ -93,7 +93,7 @@ my ($ip, $community, $battemperature_warn, $battemperature_crit, $version, $user
 # Initialize variables....
 my $net_snmp_debug_level = 0x00;	# See http://search.cpan.org/~dtown/Net-SNMP-v6.0.1/lib/Net/SNMP.pm#debug()_-_set_or_get_the_debug_mode_for_the_module
 
-my $script    = "check_ups_apc.pl";
+my $script = "check_ups_apc.pl";
 my $script_version = "1.5";
 
 my $timeout = 10;			# SNMP query timeout
@@ -130,9 +130,7 @@ my $output_current = 0;
 my $output_load = 0;
 my $battemperature = 0;
 my $exttemperature = 0;
-my $exttemperature = undef;
 my $reason_switch = 0;
-
 
 # crit / warn values
 my $remaining_time_crit = 5;
@@ -141,8 +139,8 @@ my $remaining_time_warn = 15;
 my $output_load_crit = 80;
 my $output_load_warn = 70;
 
-my $battemperature_crit = 45;
-my $battemperature_warn = 35;
+$battemperature_crit = 45;
+$battemperature_warn = 35;
 
 # my $exttemperature_crit = 45;
 # my $exttemperature_warn = 35;
@@ -288,24 +286,28 @@ sub main {
     }
 
 	# some useful stuff
+	my $firmware;
     if (defined($s->get_request($oid_firmware))) {
 	foreach ($s->var_bind_names()) {
-              	my $firmware = $s->var_bind_list()->{$_};
+              	$firmware = $s->var_bind_list()->{$_};
         }
     }
+    my $serial_number;
     if ( defined (  $s->get_request($oid_serial_number))) {
 	foreach ($s->var_bind_names()) {
-               	my $serial_number = $s->var_bind_list()->{$_};
+               	$serial_number = $s->var_bind_list()->{$_};
 	}
     }
+    my $manufacture_date;
     if ( defined (  $s->get_request($oid_manufacture_date))) {
 	foreach ($s->var_bind_names()) {
-                my $manufacture_date = $s->var_bind_list()->{$_};
+                $manufacture_date = $s->var_bind_list()->{$_};
 	}
     }
+    my $battery_date;
 	if ( defined (  $s->get_request($oid_battery_date))) {
 	foreach ($s->var_bind_names()) {
-                my $battery_date = $s->var_bind_list()->{$_};
+                $battery_date = $s->var_bind_list()->{$_};
 	}
     }
 
@@ -379,7 +381,7 @@ sub main {
             return 1;
         }
     }
-    my $remaining_time = "";
+    my $remaining_time;
     foreach ($s->var_bind_names()) {
         $remaining_time = $s->var_bind_list()->{$_}; # returns (days),(hours),(minutes),seconds
     }
@@ -398,8 +400,9 @@ sub main {
             return 1;
         }
     }
+    my $on_battery_time;
     foreach ($s->var_bind_names()) {
-        my $on_battery_time = $s->var_bind_list()->{$_}; # returns (days),(hours),(minutes),seconds
+        $on_battery_time = $s->var_bind_list()->{$_}; # returns (days),(hours),(minutes),seconds
     }
 
     #######################################################
@@ -422,9 +425,9 @@ sub main {
 
     #######################################################
  
-    my $returnstring = "";
-    my $status = 0;
-    my $perfdata = "";
+    $returnstring = "";
+    $status = 0;
+    $perfdata = "";
 	
 
     if (defined($oid_upstype)) {
@@ -498,7 +501,6 @@ sub main {
         $returnstring = $returnstring . "UNKNOWN OUTPUT STATUS! - ";
         $status = 3 if ( ( $status != 2 ) && ( $status != 1 ) );
       }
-    }
 
     # Output Load 
       if ( $output_load > $output_load_crit) {
@@ -582,7 +584,7 @@ sub main {
 	}
 
 	if ( $minutes <= $remaining_time_crit ) {
-		$returnstring = $returnstring . "CRIT  MINUTES REMAINING: $minutes - ";
+		$returnstring = $returnstring . "CRIT MINUTES REMAINING: $minutes - ";
 	       	$status = 2;
 	} elsif ( $minutes <= $remaining_time_warn ) {
 		$returnstring = $returnstring . "WARN MINUTES REMAINING: $minutes - ";
@@ -708,8 +710,6 @@ sub parse_args
 	my $ip = "";
 	my $version = "2";
 	my $community = "public";	# v1/v2c
-	my $battemperature_crit = "31";
-	my $battemperature_crit = "33";
 	
 	my $user_name = "public"; 	# v3
 	my $auth_password = "";		# v3
