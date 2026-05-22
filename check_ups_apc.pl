@@ -24,8 +24,10 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA    02111-1307    USA
 #
 # 2026-05-21: balleman (at) thtech.net
-#       - Enable experimental warnings
+#       - Enable warnings
 #       - Remove deprecated when operator
+#       - Format with perltidy
+#       - Update to v5.42
 # 2025-08-08: balleman (at) thtech.net
 #       - Add Smart-Boost and Smart-Trim statuses
 # 2023-04-05: xinqu (at) v32bis.cc
@@ -34,8 +36,8 @@
 #	- added missing options to usage/help
 # 2019-08-09: Manuel Mahr manuel (at) it-mahr.com
 #	- added on battery time
-#   - added on battery reason
-#   - added last battery replace date
+#       - added on battery reason
+#       - added last battery replace date
 # 2017-05-29: Momcilo Medic medicmomcilo (at) gmail.com
 #	- added battery temperature thresholds support
 # 2017-02-07: Oliver Skibbe oliskibbe (at) gmail.com
