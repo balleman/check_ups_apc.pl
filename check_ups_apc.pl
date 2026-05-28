@@ -795,14 +795,14 @@ sub parse_args {
     GetOptions(
         'host|H=s'          => \$ip,
         'version|v:s'       => \$version,
-        'warntemp:s'      => \$battemperature_warn,
-        'crittemp:s'      => \$battemperature_crit,
-        'warntime:s'        => \$remaining_time_warn,
-        'crittime:s'        => \$remaining_time_crit,
-        'warnload:s'        => \$output_load_warn,
-        'critload:s'        => \$output_load_crit,
-        'warnbatt:s'        => \$battery_capacity_warn,
-        'critbatt:s'        => \$battery_capacity_crit,
+        'warntemp|w:i'      => \$battemperature_warn,
+        'crittemp|c:i'      => \$battemperature_crit,
+        'warntime:i'        => \$remaining_time_warn,
+        'crittime:i'        => \$remaining_time_crit,
+        'warnload:i'        => \$output_load_warn,
+        'critload:i'        => \$output_load_crit,
+        'warnbatt:i'        => \$battery_capacity_warn,
+        'critbatt:i'        => \$battery_capacity_crit,
         'community|C:s'     => \$community,
         'externalsensor|S!' => \$with_external_sensor,
         'username|U:s'      => \$user_name,
@@ -840,28 +840,26 @@ Monitors APC SmartUPS via AP9617 SNMP management card.
 Usage: -H <hostname> -C <community> [...]
 
 Options: 
-         -H          Hostname or IP address
-         -S          with external sensor (like PowerNet)
-         -warntemp   Warning threshold for battery temperature
-         -crittemp   Critical threshold for battery temperature
-	 -warntime   Warning threshold for time remaining (minutes)
-	 -crittime   Critical threshold for time remaining (minutes)
-	 -warnload   Warning threshold for output load (percent)
-	 -critload   Critical threshold for output load (percent)
-	 -warnbatt   Warning threshold for battery capacity (percent)
-	 -critbatt   Critical threshold for battery capacity (percent)
-         -v          SNMP Version
+         -H              Hostname or IP address
+         -S              with external sensor (like PowerNet)
+         --warntemp|-w   Warning threshold for battery temperature
+         --crittemp|-c   Critical threshold for battery temperature
+	 --warntime      Warning threshold for time remaining (minutes)
+	 --crittime      Critical threshold for time remaining (minutes)
+	 --warnload      Warning threshold for output load (percent)
+	 --critload      Critical threshold for output load (percent)
+	 --warnbatt      Warning threshold for battery capacity (percent)
+	 --critbatt      Critical threshold for battery capacity (percent)
+         -v              SNMP Version
    SNMPv1/2
-         -C          Community (default is public)
+         -C              Community (default is public)
    SNMPv3
-         -U          Securityname / Username
-         -A          Authentication password
-         -a          Authentication protocl
-         -X          Private password
-         -x          Private procotol
+         -U              Securityname / Username
+         -A              Authentication password
+         -a              Authentication protocol
+         -X              Private password
+         -x              Private procotol
 
-
-	 
 -----------------------------------------------------------------	 
 Copyright 2004 Altinity Limited	 
 	 
