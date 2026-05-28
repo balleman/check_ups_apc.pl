@@ -795,8 +795,8 @@ sub parse_args {
     GetOptions(
         'host|H=s'          => \$ip,
         'version|v:s'       => \$version,
-        'warntemp|w:s'      => \$battemperature_warn,
-        'crittemp|c:s'      => \$battemperature_crit,
+        'warntemp:s'      => \$battemperature_warn,
+        'crittemp:s'      => \$battemperature_crit,
         'warntime:s'        => \$remaining_time_warn,
         'crittime:s'        => \$remaining_time_crit,
         'warnload:s'        => \$output_load_warn,
@@ -842,8 +842,8 @@ Usage: -H <hostname> -C <community> [...]
 Options: 
          -H          Hostname or IP address
          -S          with external sensor (like PowerNet)
-         -w          Warning threshold for battery temperature
-         -c          Critical threshold for battery temperature
+         -warntemp   Warning threshold for battery temperature
+         -crittemp   Critical threshold for battery temperature
 	 -warntime   Warning threshold for time remaining (minutes)
 	 -crittime   Critical threshold for time remaining (minutes)
 	 -warnload   Warning threshold for output load (percent)
